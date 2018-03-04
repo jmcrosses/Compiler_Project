@@ -1,5 +1,6 @@
-All of the requirements for the complier work. 
+Designer: Nick Larsen, Harrison Cao, Connor Cox
 
+All of the requirements for the complier work. 
 
 Instructions to Run complier:
 	Naviagte in the termial to the bin folder.
@@ -21,6 +22,7 @@ Input files we made and ran:
 	(2) errordisplay1.txt
 	(3) errordisplay2.txt
 	(4) classCode.txt
+	
 Then that generate these files as output:
 	(1) forlooptest-outputCode.txt forlooptest-outputQuad.txt
 	(2) classCode-outputCode.txt classCode-outputQuad.txt
