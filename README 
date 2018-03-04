@@ -1,0 +1,37 @@
+All of the requirements for the complier work. 
+
+
+Instructions to Run complier:
+	Naviagte in the termial to the bin folder.
+	execute java RunnerNick which will prompt you to enter the name of a source file
+	After the program is run it will print out the code to the console and it will create a file with the same 
+		name as the sourse file but with "-output" tagged on to the end
+	IMPORTANT: We planned on implementing subroutines, but that proved too hard. A result of that is we chaned the langauge to be 
+	program => main compound_stmt
+	but everyting else is the same.
+
+Additional features:
+	(1) reserved space for the varibles used in the program
+	(2) add a for loop statment,(see forLoopInput for an example)
+	(3) "//" will comment one line that will be ignored in by the complier this is shown working in forlooptest.txt
+	(4) Added the ability to generate a list of quads file and a file that the machine lang is in
+
+Input files we made and ran:
+	(1) forlooptest.txt
+	(2) errordisplay1.txt
+	(3) errordisplay2.txt
+	(4) classCode.txt
+Then that generate these files as output:
+	(1) forlooptest-outputCode.txt forlooptest-outputQuad.txt
+	(2) classCode-outputCode.txt classCode-outputQuad.txt
+
+The error code prompts in standard output:
+	(1) Illegal name of identifier on line 7 
+		for errordisplay1.txt
+	(2) Illegal use of reversed words on line 9
+		for errordisplay2.txt
+	(3) Miss semicolon on line 11
+		for errordisplay3.txt
+
+
+

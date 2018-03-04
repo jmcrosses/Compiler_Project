@@ -1,0 +1,659 @@
+/**
+ * Javacc file for COSC 40603
+ * Authors:
+ *  -Nicholas Larsen (Primary)
+ *  -Harrison Cao
+ *  -Connor Cox
+ */
+
+options
+{
+    static = false;
+    LOOKAHEAD = 2;
+    FORCE_LA_CHECK = true;
+}
+
+PARSER_BEGIN(PL40603)
+import java.util.Stack;
+public class PL40603
+{
+    private static boolean verbose = false;
+    public static int tempNum = 0;
+    public static Stack<String > oppStack = new Stack<String >();
+    public static Stack<String> stack = new Stack<String>();
+    public static Stack<String> whileStack = new Stack<String>();
+    public static Stack<String> returnStack = new Stack<String>();
+    public static QuadList quads = new QuadList();
+    static PL40603 parser;
+    public static void main(String args []) throws ParseException
+    {
+        parser = new PL40603(System.in);
+    parser.Input();
+    quads.print();
+
+    }
+    //expression: semantics
+    public static String newTemp() {
+        tempNum++;
+        return "~T"+tempNum;
+    }
+
+    static void expressionSem1(String opp) {
+//    System.out.println("expressionSem1");
+    String A = stack.pop().trim();
+    String B = stack.pop().trim();
+    String C = newTemp();
+    quads.genQuad(opp, A, B , C);
+    stack.push(C);
+  }
+
+    static void assignSem1() {
+      if (verbose) System.out.println("AssignSem1");
+    String A = stack.pop().trim();
+    String B = stack.pop().trim();
+    quads.genQuad("=",A," ", B);
+    stack.push(A);
+    }
+    static void unarySem1() {
+    String A = stack.pop().trim();
+    String opp = oppStack.pop().trim();
+    String C = newTemp();
+    quads.genQuad(opp, A, " ", C);
+    stack.push(C);
+    }
+  static void conditionalSem1() {
+    int A = quads.nextQuad;
+    String B = stack.pop().trim();
+    quads.genQuad("jeqz",B," ",0+"");
+    stack.push(A+"");
+  }
+  static void conditionalSem2() {
+      if (verbose) System.out.println("Sem2");
+    int A = quads.nextQuad;
+    quads.genQuad("jmp", " ", " ", 0 +"");
+    String B = stack.pop().trim();
+    quads.setReturn(B,quads.nextQuad);
+    stack.push(A + "");
+  }
+  static void conditionalSem3() {
+    String A = stack.pop().trim();
+    quads.setReturn(A,quads.nextQuad);
+  }
+  static void loopSem1() {
+    whileStack.push(quads.nextQuad+"");
+  }
+  static void loopSem2() {
+    String A = stack.pop().trim();
+    whileStack.push(quads.nextQuad+"");
+    quads.genQuad("jeqz",A," ", "0");
+  }
+  static void loopSem3() {
+    String A = whileStack.pop().trim();
+    String B = whileStack.pop().trim();
+    quads.genQuad("jmp", " ", " ", B);
+    quads.backpatch(A, quads.nextQuad);
+  }
+  static void loopSem4() {
+      if (whileStack.isEmpty()) {
+         System.out.println("Continue/break outside of loop");
+         parser = null;
+       }
+    else { 
+      String A = whileStack.pop().trim();
+      String B = whileStack.pop().trim();
+      whileStack.push(B);
+      whileStack.push(A);
+      quads.genQuad("jmp", " ", " ", B);
+    }
+  }
+  static void loopSem5() {
+      if (whileStack.isEmpty()) {
+         System.out.println("Continue/break outside of loop");
+         parser = null;
+       }
+      else { 
+      String A = whileStack.pop().trim();
+      whileStack.push(quads.nextQuad+"");
+      quads.genQuad("jmp", " ", " ", A);
+    }
+  }
+  static void ternSem1() {
+    String A = quads.nextQuad+"";
+    String B = stack.pop().trim();
+    stack.push(quads.nextQuad+"");
+    quads.genQuad("jeqz",B," ", "0");
+  }
+  static void ternSem2() {
+    String B = stack.pop().trim();
+    String A = stack.pop().trim();
+    quads.setReturn(A,quads.nextQuad);
+    String T = newTemp();
+    stack.push(T);
+    quads.genQuad("=", B, " ", T);
+    stack.push(quads.nextQuad+"");
+    quads.genQuad("jmp", " ", " ", "0");
+    quads.setReturn(A,quads.nextQuad);
+  }
+  static void ternSem3() {
+    String B = stack.pop().trim();
+    String A = stack.pop().trim();
+    String T = stack.pop().trim();
+    quads.genQuad("=",B," ",T);
+    quads.setReturn(A,quads.nextQuad);
+    stack.push(T);
+  }
+  static void forSem1() {
+    String A = stack.pop().trim();
+    String B = stack.pop().trim();
+    quads.genQuad("=",A," ",B);
+    whileStack.push(quads.nextQuad+"");
+  }
+  static void forSem2() {
+    whileStack.push(quads.nextQuad+"");
+    String A = stack.pop().trim();
+    quads.genQuad("jeqz",A," ", "0");
+    whileStack.push(quads.nextQuad+""); //addr of jmp to stmt
+    quads.genQuad("jmp"," "," ","0");
+    whileStack.push(quads.nextQuad +"");    //begining of inc
+  }
+  static void forSem3() {
+    String A = stack.pop().trim();
+    String B = stack.pop().trim();
+    quads.genQuad("=",A," ",B);
+    
+  }
+  static void forSem4() {
+    String A = whileStack.pop().trim();
+    String B = whileStack.pop().trim();
+    quads.genQuad("jmp", " "," ",A);
+    quads.backpatch(B,quads.nextQuad);
+  }
+  static void forSem5() {
+    String A = whileStack.pop().trim();
+    String B = whileStack.pop().trim();
+    String C = whileStack.pop().trim();
+    String D = whileStack.pop().trim();
+    quads.genQuad("jmp"," " ," ", D);
+    quads.setReturn(B,quads.nextQuad);
+    whileStack.push(C);
+    whileStack.push(A);
+  }
+
+static void returnSem1() {
+  String A = stack.pop();
+  returnStack.push(quads.nextQuad+"");
+  quads.genQuad("rtr", " "," ", A);
+}
+  
+//for debugging
+    static void printStack(Stack<String> st) {
+    Stack<String > st1 = new Stack<String >();
+    while (!st.isEmpty()) {
+        String s = st.pop();
+        st1.push(s);
+      System.out.println("- >" + s);
+    }
+    while(!st1.isEmpty()) {
+      st.push(st1.pop());
+    }
+    }
+    
+}
+
+PARSER_END(PL40603)
+
+
+
+
+
+SKIP :
+{
+    " "
+| "\r"
+| "\t"
+| "\n"
+| <"//" (~["\n","\r"])* ("\n"|"\r"|"\r\n") >
+| <"/*"(~["/"])*  "*/" >
+}
+
+TOKEN : /* OPERATORS */
+{
+    < PLUS : "+" >
+| < MINUS : "-" >
+| < MULTIPLY : "*" >
+| < DIVIDE : "/" >
+}
+TOKEN: /*Grouping */
+{   <lbrace : "{" > }
+TOKEN:
+{ < rbrace : "}" > }
+TOKEN:
+{ < lparen : "(" > }
+TOKEN:
+{ < rparen : ")" > }
+TOKEN :
+{
+    < DIGIT : [ "0"-"9" ] >
+}
+
+TOKEN :
+{
+    < LETTER : [ "a"-"z" ] | ["A" - "Z"]>
+}
+
+
+
+
+void Input() :
+{}
+{
+    program()
+}
+
+void program() :
+{
+  if (verbose) System.out.println("program");
+}
+{     
+    methodList() "main" compound_stmt()
+    {
+      if (verbose) System.out.println("program done");
+      quads.genQuad("rtr", " ", " ", 1+"");
+    }
+}
+
+void methodList()   :
+{
+  if (verbose) System.out.println("MethodList");
+}
+{
+    (
+        method()
+    )*
+    
+    {
+      if (verbose) System.out.println("methodList done");
+    }
+}
+
+void method() :
+{
+  if (verbose) System.out.println("Method");
+}
+{
+    id() "("
+    (
+         id() (","id())* ")" compound_stmt()
+    )
+
+
+    {
+      if (verbose) System.out.println("method done");
+    }
+}
+
+void compound_stmt() :
+{
+  if (verbose) System.out.println("compund_stmt");
+}
+{
+    (
+        < lbrace > (stmt())* < rbrace >
+    )
+    
+    {
+      if (verbose) System.out.println("somp_stmt done");
+    }
+}
+
+void stmt() :
+{
+  if (verbose) System.out.println("stmt");
+}
+{
+    (
+        expression() ";" { stack.pop().trim(); }
+    )|(
+        compound_stmt()
+    )|(
+        "while" {  loopSem1(); }
+        test() {  loopSem2(); }
+        stmt() {  loopSem3(); }
+    )|
+    (
+      "for" "(" id() "=" condition() ";"
+      { forSem1(); }
+      condition() ";"
+      {  forSem2(); }
+      id() "=" condition()")"
+      {  forSem3(); }
+      { forSem5(); }
+      stmt()
+      { forSem4(); }
+    )|
+    (
+        "if" test() { conditionalSem1(); } 
+          stmt()
+        ("else" {  conditionalSem2(); } stmt() )? {  conditionalSem3(); }
+    )|(
+        "break" ";" { loopSem5(); }
+    )|(
+        "continue" ";" {  loopSem4(); }
+    )|(
+        "return" expression() ";" { returnSem1(); }
+    )|(
+        ";"
+    )
+    {
+      if (verbose) System.out.println("stmt done");
+    }
+}
+
+void test() :
+{
+  if (verbose) System.out.println("test");
+}
+{
+    (
+        < lparen > expression() < rparen >
+    )
+    
+    {
+      if (verbose) System.out.println("test done");
+    }
+}
+
+void expression() :
+{
+  if (verbose) System.out.println("expression");
+}
+{
+    
+    ( 
+        id() "=" expression()
+        {
+          assignSem1();
+        }
+    )
+    |
+    (
+        condition()
+    )
+    {
+      if (verbose) System.out.println("expression done");
+    }
+}
+
+void condition() :
+{
+  if (verbose) System.out.println("condition");
+}
+{
+    disjunction() 
+      ({ ternSem1(); }"?" expression() ":"
+      {  ternSem2(); } condition() { ternSem3(); })?
+    {
+      if (verbose) System.out.println("condition done");
+    }
+}
+
+void disjunction() :
+{
+  if (verbose) System.out.println("disjunction");
+}
+{
+    conjunction() ( "|" disjunction() {  expressionSem1("|"); })?
+    {
+      if (verbose) System.out.println("disjunction done");
+    }
+}
+
+void conjunction() :
+{
+  if (verbose) System.out.println("conjunction");
+}
+{
+    comparison() ("&" conjunction() {  expressionSem1("&"); })?
+    {
+      if (verbose) System.out.println("conjunction done");
+    }
+}
+
+void comparison() :
+{
+  if (verbose) System.out.println("comparison");
+}
+{
+    relation() ("==" relation() {  expressionSem1("=="); })?
+    {
+      if (verbose) System.out.println("comparison done");
+    }
+}
+
+void relation() :
+{
+  if (verbose) System.out.println("relation");
+
+
+}
+{
+    sum() (rel_op() sum()
+    {
+      if(oppStack.peek().equals("+")) { 
+  		  oppStack.pop();
+  		  System.out.println("Trimming out the bad +");
+  	  }
+      expressionSem1(oppStack.pop().trim());
+
+    })*
+    {
+        if (verbose) System.out.println("relation done");
+    }
+}
+
+void sum() :
+{
+  if (verbose) System.out.println("sum");
+  boolean b = true;
+}
+{
+    term()
+    (
+      (add_op() sum() )
+      {
+        expressionSem1(oppStack.pop().trim());
+      }
+      | factor2(true) { b = false; }
+      {
+        expressionSem1(oppStack.pop().trim());
+      }
+    )*
+    { 
+    if (verbose) System.out.println("sum done");
+  }
+}
+
+void term() :
+{
+  if (verbose) System.out.println("term");
+}
+{
+    (      factor1() | factor2(false)
+  	)
+  (
+      mul_op() (factor1() |("("factor2(false)")") )
+      {
+          expressionSem1(oppStack.pop().trim());
+      }
+    )*
+    { 
+      if (verbose) System.out.println("term done");
+    }
+}
+void factor2(boolean cameFromSum) :
+{
+	
+}
+{
+  (
+    "-" { }
+  ) primary()
+  {
+	String A = stack.pop();
+	String T = newTemp();
+	quads.genQuad("-" ,A," ",T);
+	stack.push(T);
+	if(cameFromSum) { 
+		oppStack.push("+");
+    }
+  }
+}
+void factor1() :
+{
+  if (verbose) System.out.println("factor1");
+  char un;
+  Token s = null;
+}
+{
+  (    s = "!" 
+  )? primary()
+  {
+	if(s != null && s.toString().equals("!")) { 
+	  String A = stack.pop();
+	  String T = newTemp();
+	  quads.genQuad("!" ,A," ",T);
+	  stack.push(T);
+	} else if(s!=null && s.equals("-")) {
+	  	String A = stack.pop();
+	    String T = newTemp();
+		quads.genQuad("-" ,A," ",T);
+		stack.push(T);
+	}
+  }
+}
+
+
+void primary() :
+{
+  if (verbose) System.out.println("primary");
+}
+{
+    (
+      intProd()  {   }
+    )
+    |
+    (
+    id() {    }
+    )
+    |
+    ( 
+    < lparen > expression() < rparen >
+    )
+    {
+      if (verbose) System.out.println("primary done");
+    }
+}
+
+void rel_op() :
+{
+  if (verbose) System.out.println("rel_op");
+  Token opp;
+}
+{
+    (
+      opp = ">" | opp = "<" | opp = "<=" | opp = ">="
+    )
+    { 
+      	oppStack.push(opp.toString());
+    		  if (verbose) System.out.println("rel_op done");
+    		    
+    }
+}
+void mul_op() :
+{
+  if (verbose) System.out.println("mul_op");
+  Token opp;
+}
+{
+    (
+      opp = "*" |opp =  "/" | opp =  "%"
+    )
+    {
+      oppStack.push(opp.toString());
+        if (verbose) System.out.println("mul_op done");
+          
+    }
+}
+
+void add_op() :
+{
+  if (verbose) System.out.println("add_op");
+  Token opp;
+}
+{
+    (
+        opp = "+" 
+    )
+    {
+      String s = opp.toString();
+      oppStack.push(s);
+      if (verbose) System.out.println("add_op done");
+        
+    } 
+}
+
+void unary_op() :
+{
+  if (verbose) System.out.println("unary_op");
+  Token opp;
+}
+{
+    (
+      opp =  "!" 
+    )
+    {
+      oppStack.push(opp.toString()); 
+      if (verbose) System.out.println("unary_op done");
+        
+    }
+}
+
+void id() :
+{
+    if (verbose) System.out.println("id");
+    Token t;
+    String s = "";
+}
+{
+  (
+  t = < LETTER > { s += t.toString();} (t = < LETTER > { s += t.toString();} |t = < DIGIT > { s += t.toString();})*
+  {
+      stack.push(s.trim());
+    }
+  )
+  {
+    if (verbose) System.out.println("id done");
+  }
+}
+
+void intProd() :
+{
+    if (verbose) System.out.println("intProd");
+    Token n;
+    int num = 0;
+}
+{
+      (n = < DIGIT >
+      {
+        num = num*10 + Integer.parseInt(n.toString());
+      })+
+      {
+        stack.push((num + "").trim());
+        if (verbose) System.out.println("Int prod done");
+      }
+}
+
+
+
+
+
